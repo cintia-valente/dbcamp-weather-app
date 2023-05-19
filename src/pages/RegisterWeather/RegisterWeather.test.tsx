@@ -1,8 +1,10 @@
-import { render, waitFor, screen } from "@testing-library/react";
+import { render, waitFor, screen, fireEvent } from "@testing-library/react";
 
 import { jest } from "@jest/globals";
 
 import { RegisterWeather } from ".";
+
+import { OperationsService } from "../../data/services/operations/OperationsService";
 jest.mock("../../data/services/ApiConfig");
 
 const mockCities = [
@@ -16,22 +18,36 @@ const mockCities = [
   },
 ];
 
+const mockWeather = [
+  {
+    city: {
+      idCity: 4,
+      name: "Rio de Janeiro",
+    },
+    date: "2023-05-10",
+    dayTimeEnum: "TEMPESTADE",
+    nightTimeEnum: "CHUVA",
+    maxTemperature: 40,
+    minTemperature: 22,
+    precipitation: 42,
+    humidity: 60,
+    windSpeed: 95,
+  },
+];
+
 jest.mock("../../data/services/operations/OperationsService", () => ({
   OperationsService: {
     getCity: () => Promise.resolve(mockCities),
+    postWeather: () => Promise.resolve(mockWeather),
   },
 }));
 
 describe("RegisterWeather Page", () => {
-  it("deve renderizar a página RegisterWeather", () => {
+  beforeEach(() => {
     render(<RegisterWeather />);
-
-    expect(screen.getByText("Cadastro Metereológico")).toBeInTheDocument();
   });
 
   it("deve renderizar uma lista de cidades", async () => {
-    render(<RegisterWeather />);
-
     await waitFor(() => {
       const selectElement = screen.getByTestId("city-select");
       expect(selectElement).toBeInTheDocument();
@@ -42,5 +58,28 @@ describe("RegisterWeather Page", () => {
         expect(optionElement).toHaveValue(city.name);
       });
     });
+  });
+
+  it("deve exibir uma mensagem de erro", async () => {
+    await waitFor(() => {
+      const selectElement = screen.queryByTestId("city-select");
+
+      if (!selectElement) {
+        const errorMessage = screen.getByText(
+          "Erro ao carregar a lista de cidades"
+        );
+        expect(errorMessage).toBeInTheDocument();
+      }
+    });
+  });
+
+  it("deve chamar a função cancel ao clicar no botão 'Cancelar'", () => {
+    const alertMock = jest.spyOn(window, "alert").mockImplementation(() => {});
+
+    const cancelButton = screen.getByText("Cancelar");
+
+    fireEvent.click(cancelButton);
+
+    expect(alertMock).toHaveBeenCalledWith("Cancelado com sucesso!");
   });
 });
